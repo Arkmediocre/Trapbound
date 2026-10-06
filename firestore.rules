@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /levels/{level}/scores/{uid} {
+      function isValidScore() {
+        return request.auth != null
+          && request.auth.uid == uid
+          && request.auth.token.firebase.sign_in_provider == 'anonymous'
+          && request.resource.data.keys().hasAll([
+            'uid',
+            'name',
+            'level',
+            'score',
+            'durationMs',
+            'updatedAt'
+          ])
+          && request.resource.data.keys().hasOnly([
+            'uid',
+            'name',
+            'level',
+            'score',
+            'durationMs',
+            'updatedAt'
+          ])
+          && request.resource.data.uid == uid
+          && request.resource.data.level == int(level)
+          && request.resource.data.level >= 1
+          && request.resource.data.level <= 100
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 20
+          && request.resource.data.score is int
+          && request.resource.data.score >= 0
+          && request.resource.data.score <= 6
+          && request.resource.data.durationMs is int
+          && request.resource.data.durationMs > 0
+          && request.resource.data.updatedAt == request.time;
+      }
+
+      allow read: if true;
+      allow create: if isValidScore();
+      allow update: if isValidScore()
+        && (
+          request.resource.data.score > resource.data.score
+          || (
+            request.resource.data.score == resource.data.score
+            && request.resource.data.durationMs < resource.data.durationMs
+          )
+        );
+      allow delete: if false;
+    }
+  }
+}
