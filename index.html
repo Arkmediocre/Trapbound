@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#111525">
+  <meta name="description" content="Trapbound is a fast, free-to-play platform game full of sneaky traps.">
+  <title>Trapbound — one more try</title>
+  <style>
+    :root{color-scheme:dark;--bg:#10131f;--panel:#191e2e;--line:#30384c;--muted:#959db3;--white:#f3f4f8;--lime:#cbff6b;--coral:#ff7186;--purple:#a392ff}
+    *{box-sizing:border-box}
+    html,body{width:100%;height:100%;margin:0}
+    body{overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#202943 0,#111522 65%,#0b0d15 100%);color:var(--white);font-family:"Space Grotesk","Trebuchet MS",system-ui,sans-serif;display:flex;align-items:center;justify-content:center}
+    button{font:inherit;color:inherit}
+    .shell{width:min(1120px,100vw);padding:20px}
+    .topbar{height:54px;display:flex;align-items:center;justify-content:space-between;margin:0 4px 12px}
+    .brand{display:flex;align-items:center;gap:11px;font-size:16px;font-weight:700;letter-spacing:.12em}
+    .brand-mark{width:29px;height:29px;border:2px solid var(--lime);border-radius:9px;display:grid;place-items:center;color:var(--lime);font-family:"DM Mono",monospace;font-size:17px;transform:rotate(-7deg)}
+    .brand small{font:10px "DM Mono",monospace;color:var(--muted);letter-spacing:.12em;display:block;margin-top:1px}
+    .top-actions{display:flex;gap:8px}
+    .icon-button{height:38px;min-width:40px;border:1px solid var(--line);background:#171b29;border-radius:11px;cursor:pointer;color:#c4cadd;transition:.16s}
+    .icon-button:hover{border-color:#68728b;color:white;transform:translateY(-1px)}
+    .game-frame{position:relative;overflow:hidden;border:1px solid #343b50;border-radius:19px;background:#11182a;box-shadow:0 24px 90px #0008,0 1px #ffffff0c inset}
+    canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;touch-action:none}
+    .hud{position:absolute;inset:0;pointer-events:none}
+    .hud-top{position:absolute;top:17px;left:20px;right:20px;display:flex;align-items:flex-start;justify-content:space-between}
+    .stage{font:11px "DM Mono",monospace;letter-spacing:.13em;color:var(--lime);text-transform:uppercase}
+    .stage-name{font-size:16px;font-weight:700;margin-top:4px}
+    .stats{display:flex;gap:8px}
+    .stat{background:#111522bd;border:1px solid #ffffff1c;border-radius:10px;padding:7px 10px;font:11px "DM Mono",monospace;color:#b7bfd0}
+    .stat b{color:var(--white);font-weight:500}
+    .bottom-tip{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:#111522a8;padding:7px 12px;border:1px solid #ffffff16;border-radius:99px;color:#b6bed0;font-size:11px;white-space:nowrap}
+    .bottom-tip strong{color:var(--lime);font-weight:600}
+    .overlay{position:absolute;inset:0;display:grid;place-items:center;background:#0d101bc9;backdrop-filter:blur(8px);padding:18px;transition:opacity .2s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .card{width:min(430px,94%);padding:30px;border:1px solid #ffffff21;border-radius:20px;background:linear-gradient(145deg,#22283a,#171b29);box-shadow:0 20px 70px #0008;text-align:center}
+    .eyebrow{font:11px "DM Mono",monospace;color:var(--lime);letter-spacing:.2em;text-transform:uppercase}
+    .card h1{font-size:clamp(34px,7vw,54px);line-height:.98;letter-spacing:-.06em;margin:13px 0 12px}
+    .card p{font-size:14px;color:#b2bacd;line-height:1.65;margin:0 auto 20px;max-width:330px}
+    .primary{border:0;border-radius:11px;padding:13px 23px;background:var(--lime);color:#151a1d;font-weight:700;cursor:pointer;box-shadow:0 5px 0 #87ad37;transition:transform .12s,box-shadow .12s}
+    .primary:hover{transform:translateY(-2px);box-shadow:0 7px 0 #87ad37}
+    .primary:active{transform:translateY(3px);box-shadow:0 2px 0 #87ad37}
+    .card-foot{margin-top:17px!important;font:10px "DM Mono",monospace!important;color:#818aa0!important}
+    .progress{display:flex;gap:7px;justify-content:center;margin:18px 0 22px}
+    .pip{width:23px;height:5px;border-radius:5px;background:#42485a}
+    .pip.done{background:var(--lime)}
+    .pip.active{background:var(--purple)}
+    .controls{display:flex;justify-content:space-between;align-items:center;margin:13px 4px 0;color:#8e97aa;font-size:11px}
+    .controls span{display:flex;gap:7px;align-items:center}
+    kbd{font:10px "DM Mono",monospace;border:1px solid #43495a;background:#1a1e2c;border-radius:5px;padding:4px 6px;color:#d5d9e5}
+    .mobile-controls{display:none}
+    @media(max-width:700px){
+      .shell{padding:10px}.topbar{margin:0 3px 8px;height:43px}.brand{font-size:13px}.brand-mark{width:26px;height:26px}.game-frame{border-radius:12px}.hud-top{top:9px;left:10px;right:10px}.stage-name{font-size:12px}.stage{font-size:9px}.stat{padding:5px 7px;font-size:9px}.bottom-tip{display:none}.controls{font-size:9px;margin-top:8px}.controls span:first-child{display:none}
+      .mobile-controls{position:absolute;inset:auto 12px 10px;display:flex;justify-content:space-between;align-items:end;pointer-events:none}
+      .pad{display:flex;gap:8px}.touch-btn{pointer-events:auto;touch-action:none;width:54px;height:50px;border:1px solid #ffffff4d;border-radius:15px;background:#111522a8;color:white;font-size:20px;display:grid;place-items:center;user-select:none}
+      .touch-btn.jump{width:78px;height:58px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--lime)}
+      .card{padding:23px 19px}.overlay{padding:10px}
+    }
+    @media(max-height:520px){.shell{padding:6px 12px}.topbar{height:34px;margin-bottom:5px}.controls{display:none}.card{padding:17px}.card h1{font-size:36px}.card p{margin-bottom:12px}.game-frame{max-height:calc(100dvh - 52px)}canvas{max-height:calc(100dvh - 52px);width:auto;max-width:100%}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">T</div><div>TRAPBOUND<small>ONE MORE TRY</small></div></div>
+      <div class="top-actions">
+        <button class="icon-button" id="soundButton" aria-label="Toggle sound" title="Toggle sound">♫</button>
+        <button class="icon-button" id="pauseButton" aria-label="Pause game" title="Pause">Ⅱ</button>
+      </div>
+    </header>
+    <section class="game-frame" aria-label="Trapbound game">
+      <canvas id="game" width="960" height="540" aria-label="Trapbound platform game"></canvas>
+      <div class="hud">
+        <div class="hud-top"><div><div class="stage" id="stageLabel"></div><div class="stage-name" id="stageName"></div></div>
+          <div class="stats"><div class="stat">DEATHS <b id="deathCount">0</b></div><div class="stat">BEST <b id="bestTime">--:--</b></div></div>
+        </div>
+        <div class="bottom-tip">MOVE <strong>A D</strong> &nbsp; JUMP <strong>SPACE</strong> &nbsp; RESTART <strong>R</strong></div>
+      </div>
+      <div class="mobile-controls">
+        <div class="pad"><button class="touch-btn" data-control="left" aria-label="Move left">‹</button><button class="touch-btn" data-control="right" aria-label="Move right">›</button></div>
+        <button class="touch-btn jump" data-control="jump" aria-label="Jump">JUMP ↑</button>
+      </div>
+      <div class="overlay" id="overlay">
+        <div class="card"><div class="eyebrow" id="eyebrow">A tiny game about bad decisions</div><h1 id="headline">TRAP<br>BOUND</h1><p id="description">Five little levels. A suspicious number of traps. Keep your cool and find the exit.</p>
+          <div class="progress" id="progress"></div><button class="primary" id="playButton">LET'S PLAY</button><p class="card-foot" id="cardFoot">NO DOWNLOAD · JUST ONE MORE TRY</p>
+        </div>
+      </div>
+    </section>
+    <footer class="controls"><span><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> move <kbd>SPACE</kbd> jump</span><span>Every trap is a lesson. Probably.</span><span><kbd>R</kbd> retry &nbsp; <kbd>ESC</kbd> pause</span></footer>
+  </main>
+  <script>
+  (() => {
+    "use strict";
+    const W=960,H=540,FLOOR=430,canvas=document.querySelector("#game"),ctx=canvas.getContext("2d");
+    const ui={overlay:document.querySelector("#overlay"),eyebrow:document.querySelector("#eyebrow"),headline:document.querySelector("#headline"),description:document.querySelector("#description"),play:document.querySelector("#playButton"),foot:document.querySelector("#cardFoot"),progress:document.querySelector("#progress"),stage:document.querySelector("#stageLabel"),name:document.querySelector("#stageName"),deaths:document.querySelector("#deathCount"),best:document.querySelector("#bestTime"),sound:document.querySelector("#soundButton"),pause:document.querySelector("#pauseButton")};
+    const C={ink:"#111525",lime:"#cbff6b",green:"#49d9a3",greenDark:"#249d79",coral:"#ff7186",gold:"#ffcc67",purple:"#a392ff",white:"#f3f4f8"};
+    const make=(name,subtitle,platforms,spikes,trigger,trap,door=888)=>({name,subtitle,platforms:platforms.map(([x,y,w,h,t=false])=>({x,y,w,h,trap:t,gone:false})),spikes:spikes.map(([x,w])=>({x,y:FLOOR-17,w,h:17,hidden:true})),trigger,trap,door:{x:door,y:FLOOR-69,w:42,h:69},ceiling:null,triggered:false});
+    const levels=[
+      make("The suspicious shortcut","That bright bridge looks safe. Probably.",[[0,FLOOR,285,110],[285,FLOOR,112,110,true],[397,FLOOR,563,110]],[],265,"bridge"),
+      make("Mind the quiet","The empty path is trying too hard.",[[0,FLOOR,W,110]],[[376,145]],320,"spikes"),
+      make("Door with a head start","The exit is not as stationary as it looks.",[[0,FLOOR,W,110]],[],315,"runner",455),
+      make("The long way down","Keep moving, but watch your feet.",[[0,FLOOR,265,110],[265,FLOOR,170,110,true],[470,FLOOR,490,110]],[[655,112]],290,"double"),
+      make("One last trick","A good jump is worth more than good luck.",[[0,FLOOR,W,110]],[[240,112],[510,112]],210,"final")
+    ];
+    const keys=new Set(),touch=new Set(),particles=[];
+    let levelIndex=0,player,mode="title",deaths=0,runStarted=0,elapsed=0,toast="",toastTime=0,shake=0,soundOn=true,audio=null,lastTime=0;
+    let best=Number(localStorage.getItem("trapbound-best")||0),jumpQueued=false;
+    const fmt=ms=>{if(!ms)return"--:--";const s=Math.floor(ms/1000);return`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`};
+    ui.best.textContent=fmt(best);
+    const active=()=>levels[levelIndex];
+    function resetLevel(){player={x:48,y:FLOOR-36,w:30,h:36,vy:0,ground:true,walk:0};const l=active();l.triggered=false;l.platforms.forEach(p=>p.gone=false);l.spikes.forEach(s=>s.hidden=true);l.door.x=l.trap==="runner"?455:888;l.ceiling=l.trap==="runner"?{x:465,y:67,w:235,h:22,vy:0}:null;toast="";toastTime=0}
+    function start(){levelIndex=0;deaths=0;runStarted=performance.now();mode="playing";ui.overlay.classList.add("hidden");ui.pause.textContent="Ⅱ";resetLevel();syncHud()}
+    function syncHud(){ui.stage.textContent=`STAGE ${levelIndex+1} / ${levels.length}`;ui.name.textContent=active().name;ui.deaths.textContent=deaths;ui.best.textContent=fmt(best);ui.progress.innerHTML=levels.map((_,i)=>`<span class="pip ${i<levelIndex?"done":i===levelIndex?"active":""}"></span>`).join("")}
+    function panel(kind){mode=kind;ui.overlay.classList.remove("hidden");ui.progress.style.display=kind==="won"||kind==="title"?"flex":"none";if(kind==="title"){ui.eyebrow.textContent="A tiny game about bad decisions";ui.headline.innerHTML="TRAP<br>BOUND";ui.description.textContent="Five little levels. A suspicious number of traps. Keep your cool and find the exit.";ui.play.textContent="LET'S PLAY";ui.foot.textContent="NO DOWNLOAD · JUST ONE MORE TRY"}else if(kind==="paused"){ui.eyebrow.textContent="Take a breath";ui.headline.textContent="PAUSED";ui.description.textContent="The traps can wait. They are very patient.";ui.play.textContent="BACK TO IT";ui.foot.textContent="PRESS ESC TO RESUME"}else if(kind==="dead"){ui.eyebrow.textContent="The level wins this round";ui.headline.textContent="OOPS.";ui.description.textContent=toast||"A little more careful next time.";ui.play.textContent="TRY AGAIN";ui.foot.textContent="YOUR DEATHS ARE PART OF THE PLAN"}else{ui.eyebrow.textContent="Somehow, you made it";ui.headline.textContent="NICE WORK.";ui.description.textContent=`Five stages cleared in ${fmt(performance.now()-runStarted)}. Against all odds.`;ui.play.textContent="PLAY AGAIN";ui.foot.textContent="THE TRAPS WILL MISS YOU"}}
+    function say(text,frames=130){toast=text;toastTime=frames}
+    function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+    function particle(x,y,color,count=12){for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,speed=1+Math.random()*4;particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-1,size:2+Math.random()*4,color,life:35+Math.random()*28})}}
+    function sound(freq=440,duration=.07,type="sine"){if(!soundOn)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(.045,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+duration)}catch(e){console.warn("Audio could not start:",e)}}
+    function kill(text){if(mode!=="playing")return;mode="dead";deaths++;ui.deaths.textContent=deaths;say(text);shake=12;particle(player.x+15,player.y+18,C.coral,22);sound(115,.23,"sawtooth");panel("dead")}
+    function trap(l){l.triggered=true;if(l.trap==="bridge"||l.trap==="double"){l.platforms.filter(p=>p.trap).forEach(p=>p.gone=true);say("The bridge was a decoy!");shake=5}if(["spikes","double","final"].includes(l.trap)){l.spikes.forEach(s=>s.hidden=false);say("Surprise! Find a way over.");particle(player.x+20,FLOOR,C.coral,15)}if(l.trap==="runner")say("The door is running away!");sound(245,.12,"square")}
+    function next(){particle(player.x+15,player.y+18,C.lime,18);sound(660,.15);if(levelIndex===levels.length-1){const time=performance.now()-runStarted;if(!best||time<best){best=time;localStorage.setItem("trapbound-best",String(best))}syncHud();panel("won");return}levelIndex++;resetLevel();syncHud()}
+    function update(dt){const l=active();if(mode!=="playing")return;const scale=dt/16.667,oldBottom=player.y+player.h;const left=keys.has("ArrowLeft")||keys.has("a")||touch.has("left"),right=keys.has("ArrowRight")||keys.has("d")||touch.has("right");let dir=Number(right)-Number(left);player.x=Math.max(0,Math.min(W-player.w,player.x+dir*5.1*scale));player.walk+=dir*scale;if((jumpQueued||keys.has(" ")||keys.has("ArrowUp")||keys.has("w")||touch.has("jump"))&&player.ground){player.vy=-14.6;player.ground=false;jumpQueued=false;sound(490,.06)}player.vy=Math.min(17,player.vy+.72*scale);player.y+=player.vy*scale;player.ground=false;
+      if(!l.triggered&&player.x>l.trigger)trap(l);
+      if(l.trap==="runner"&&l.triggered){l.door.x=Math.min(888,l.door.x+2.8*scale);l.ceiling.vy=Math.min(12,l.ceiling.vy+.45*scale);l.ceiling.y+=l.ceiling.vy*scale}
+      for(const p of l.platforms){if(p.gone)continue;if(player.x+player.w>p.x&&player.x<p.x+p.w&&player.vy>=0&&oldBottom<=p.y+2&&player.y+player.h>=p.y){player.y=p.y-player.h;player.vy=0;player.ground=true}}
+      for(const s of l.spikes)if(!s.hidden&&overlap(player,{x:s.x,y:s.y-13,w:s.w,h:s.h+13})){kill("Those spikes were very pointy.");break}
+      if(l.ceiling&&overlap(player,l.ceiling))kill("The ceiling came down.");
+      if(player.y>H+40)kill("The floor was definitely fake.");
+      if(mode==="playing"&&overlap(player,l.door))next();
+      if(toastTime>0)toastTime-=scale;
+      for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*scale;p.y+=p.vy*scale;p.vy+=.12*scale;p.life-=scale;if(p.life<=0)particles.splice(i,1)}
+      shake=Math.max(0,shake-.55*scale)
+    }
+    function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+    function render(){const l=active();ctx.save();if(shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#18213c");bg.addColorStop(1,"#344e69");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);for(let i=0;i<48;i++){let x=(i*193+37)%W,y=(i*83+17)%365;ctx.globalAlpha=.22+(i%4)*.1;ctx.fillStyle="#d9e1ff";ctx.beginPath();ctx.arc(x,y,i%7===0?1.7:1,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+      // distant silhouettes
+      ctx.fillStyle="#202d49";for(let x=-10;x<W;x+=110){ctx.beginPath();ctx.moveTo(x,FLOOR);ctx.lineTo(x+43,330+(x%4)*7);ctx.lineTo(x+91,FLOOR);ctx.fill()}
+      ctx.fillStyle="#202a40";ctx.fillRect(0,FLOOR+37,W,H-FLOOR-37);
+      for(const p of l.platforms){if(p.gone)continue;rounded(p.x,p.y,p.w,p.h,7,p.trap?"#bc536e":C.green);rounded(p.x,p.y,p.w,9,5,p.trap?"#ff8790":C.greenDark);for(let x=p.x+18;x<p.x+p.w-6;x+=29){ctx.fillStyle="#dcfff1";ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(x,p.y+5,1.5,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1}
+      for(const s of l.spikes){if(s.hidden)continue;ctx.fillStyle="#b44866";ctx.fillRect(s.x,s.y,s.w,s.h+2);ctx.fillStyle=C.coral;for(let x=s.x;x<s.x+s.w;x+=22){ctx.beginPath();ctx.moveTo(x,s.y+2);ctx.lineTo(x+11,s.y-16);ctx.lineTo(Math.min(x+22,s.x+s.w),s.y+2);ctx.fill()}}
+      if(l.ceiling){rounded(l.ceiling.x,l.ceiling.y,l.ceiling.w,l.ceiling.h,5,"#be5d75");rounded(l.ceiling.x,l.ceiling.y,l.ceiling.w,5,3,C.coral)}
+      const d=l.door;ctx.globalAlpha=.18;ctx.fillStyle=C.gold;ctx.beginPath();ctx.ellipse(d.x+d.w/2,d.y+d.h/2,d.w*.95,d.h*.72,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;rounded(d.x,d.y,d.w,d.h,12,C.gold);ctx.strokeStyle="#fff1c0";ctx.lineWidth=3;ctx.strokeRect(d.x+1.5,d.y+1.5,d.w-3,d.h-3);ctx.fillStyle="#664e39";ctx.beginPath();ctx.arc(d.x+d.w-10,d.y+d.h/2+4,3,0,Math.PI*2);ctx.fill();
+      const bob=player.ground&&player.walk?Math.sin(elapsed*.017)*2:0;ctx.fillStyle="#0e1424";ctx.globalAlpha=.4;ctx.beginPath();ctx.ellipse(player.x+15,FLOOR+5,17,4,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;rounded(player.x,player.y+bob,player.w,player.h,9,C.white);rounded(player.x,player.y+bob,player.w,player.h,9,"#9eacca");rounded(player.x+2,player.y+bob+2,player.w-4,player.h-4,7,C.white);ctx.fillStyle="#202941";ctx.beginPath();ctx.arc(player.x+10,player.y+bob+14,2.2,0,Math.PI*2);ctx.arc(player.x+21,player.y+bob+14,2.2,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#202941";ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(player.x+15,player.y+bob+17,5,.15,Math.PI-.15);ctx.stroke();
+      for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/45);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+      if(toastTime>0&&toast&&mode==="playing"){ctx.font="600 14px 'Space Grotesk',sans-serif";const width=ctx.measureText(toast).width+34;rounded(W/2-width/2,104,width,39,18,"#ae506be8");ctx.fillStyle="white";ctx.textAlign="center";ctx.fillText(toast,W/2,129)}
+      ctx.restore();elapsed+=16.67}
+    function frame(now){const dt=Math.min(34,now-(lastTime||now));lastTime=now;update(dt);render();requestAnimationFrame(frame)}
+    document.addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight","ArrowUp"," ","Escape"].includes(e.key))e.preventDefault();const key=e.key.toLowerCase();keys.add(key);if(key==="r"){if(mode==="dead")resetLevel();else if(mode==="playing")resetLevel();else if(mode==="won"||mode==="title")start()}if(key==="escape"){if(mode==="playing")panel("paused");else if(mode==="paused"){mode="playing";ui.overlay.classList.add("hidden")}}});
+    document.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+    ui.play.addEventListener("click",()=>{if(mode==="paused"){mode="playing";ui.overlay.classList.add("hidden")}else if(mode==="dead"){resetLevel();mode="playing";ui.overlay.classList.add("hidden")}else start()});
+    ui.pause.addEventListener("click",()=>{if(mode==="playing")panel("paused");else if(mode==="paused"){mode="playing";ui.overlay.classList.add("hidden")}});
+    ui.sound.addEventListener("click",()=>{soundOn=!soundOn;ui.sound.textContent=soundOn?"♫":"×";ui.sound.setAttribute("aria-label",soundOn?"Mute sound":"Enable sound")});
+    document.querySelectorAll(".touch-btn").forEach(b=>{const control=b.dataset.control;const down=e=>{e.preventDefault();b.setPointerCapture?.(e.pointerId);touch.add(control);if(control==="jump")jumpQueued=true};const up=e=>{e.preventDefault();touch.delete(control)};b.addEventListener("pointerdown",down);b.addEventListener("pointerup",up);b.addEventListener("pointercancel",up);b.addEventListener("lostpointercapture",up)});
+    resetLevel();syncHud();requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
