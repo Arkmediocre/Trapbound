@@ -9,6 +9,8 @@ const screenSizeLabel = document.querySelector('#screenSizeLabel');
 const stageWrap = document.querySelector('#stageWrap');
 const fullscreenButton = document.querySelector('#fullscreenButton');
 const stageFullscreenButton = document.querySelector('#stageFullscreenButton');
+const rotateButton = document.querySelector('#rotateButton');
+const musicButton = document.querySelector('#musicButton');
 const SCREEN_SIZE_KEY = 'level-devil-screen-size';
 
 const WIDTH = canvas.width;
@@ -55,12 +57,18 @@ let won = false;
 let enteringDoor = false;
 let playerHidden = false;
 let aiPilot = false;
+let aiRetriesThisLevel = 0;
 let aiServerJump = false;
 let aiRequestCountdown = 0;
 let aiRequestGeneration = 0;
 let aiRequestInFlight = false;
 let aiServerAvailable = false;
 let aiServerErrorShown = false;
+let audioContext = null;
+let musicTimer = 0;
+let musicEnabled = false;
+let musicNotes = [];
+let musicStep = 0;
 let levelCoins = 0;
 let levelStartedAt = 0;
 let deaths = 0;
@@ -263,6 +271,86 @@ function setStatus(message, duration = 2.5) {
   statusTimer = duration;
 }
 
+function updateMusicButton() {
+  const label = musicEnabled ? 'Stop level music' : 'Start level music';
+  musicButton.setAttribute('aria-label', label);
+  musicButton.title = label;
+  musicButton.classList.toggle('is-active', musicEnabled);
+}
+
+function scheduleLevelMusic() {
+  if (!musicEnabled || !audioContext || audioContext.state !== 'running') return;
+  const scale = [0, 3, 5, 7, 10, 12, 10, 7];
+  const note = scale[musicNotes[musicStep % musicNotes.length]];
+  const root = 174.61 * (2 ** ((currentLevel % 12) / 12));
+  const start = audioContext.currentTime;
+  const duration = 0.44;
+  const oscillator = audioContext.createOscillator();
+  const volume = audioContext.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.value = root * (2 ** (note / 12));
+  volume.gain.setValueAtTime(0.0001, start);
+  volume.gain.exponentialRampToValueAtTime(0.035, start + 0.035);
+  volume.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(volume);
+  volume.connect(audioContext.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.02);
+  musicStep += 1;
+  musicTimer = window.setTimeout(scheduleLevelMusic, 470 + (currentLevel % 7) * 28);
+}
+
+function selectLevelMusic() {
+  if (musicTimer) window.clearTimeout(musicTimer);
+  if (!musicEnabled) return;
+  const random = randomForLevel(currentLevel + 137);
+  musicNotes = Array.from({ length: 8 }, () => Math.floor(random() * 8));
+  musicStep = 0;
+  scheduleLevelMusic();
+}
+
+async function toggleLevelMusic() {
+  if (musicEnabled) {
+    musicEnabled = false;
+    if (musicTimer) window.clearTimeout(musicTimer);
+    updateMusicButton();
+    return;
+  }
+
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) {
+    setStatus('This browser does not support background music.', 3);
+    return;
+  }
+  try {
+    audioContext ??= new AudioContextConstructor();
+    await audioContext.resume();
+    musicEnabled = true;
+    updateMusicButton();
+    selectLevelMusic();
+  } catch (error) {
+    console.error('Could not start level music.', error);
+    setStatus('Could not start music. Check your browser audio settings.', 3);
+  }
+}
+
+async function rotateForPhone() {
+  try {
+    if (!document.fullscreenElement && stageWrap.requestFullscreen) {
+      await stageWrap.requestFullscreen();
+    }
+    if (screen.orientation && typeof screen.orientation.lock === 'function') {
+      await screen.orientation.lock('landscape');
+      setStatus('Landscape mode enabled.', 2);
+      return;
+    }
+    setStatus('Please rotate your phone sideways for landscape play.', 3);
+  } catch (error) {
+    console.info('Phone orientation lock is unavailable.', error);
+    setStatus('Please allow fullscreen, then rotate your phone sideways.', 3);
+  }
+}
+
 function setScreenSize(size, persist = true) {
   const normalized = Math.max(70, Math.min(150, Math.round(Number(size) / 10) * 10));
   document.documentElement.style.setProperty('--game-screen-size', `${normalized}%`);
@@ -341,6 +429,7 @@ function updateProgressUI() {
 
 function startLevel(level) {
   currentLevel = Math.max(1, Math.min(highestUnlocked, level));
+  aiRetriesThisLevel = 0;
   aiRequestGeneration += 1;
   aiRequestInFlight = false;
   aiRequestCountdown = 0;
@@ -370,6 +459,7 @@ function startLevel(level) {
   document.querySelector('#pauseButton').textContent = 'Ⅱ';
   document.querySelector('#pauseButton').setAttribute('aria-label', 'Pause game');
   updateProgressUI();
+  selectLevelMusic();
   const chapter = chapters[Math.min(4, Math.floor((currentLevel - 1) / 20))];
   setStatus(`${chapter.name} — find the exit. Trust nothing.`, 3);
 }
@@ -389,6 +479,7 @@ function hitSaw(saw, rect) {
 function die(message = 'Trap! Shake it off and go again.') {
   if (player.safeTime > 0 || won) return;
   deaths += 1;
+  if (aiPilot) aiRetriesThisLevel += 1;
   player.x = 58;
   player.y = FLOOR_Y - player.h;
   player.vx = 0;
@@ -402,7 +493,11 @@ function die(message = 'Trap! Shake it off and go again.') {
       platform.resetTimer = 0;
     }
   }
-  setStatus(deaths % 3 === 0 ? 'The devil got you again. Breathe. Try again.' : message, 2);
+  if (aiPilot) {
+    setStatus(`AI recovering from trap ${deaths}; retrying level ${currentLevel} automatically.`, 2.4);
+  } else {
+    setStatus(deaths % 3 === 0 ? 'The devil got you again. Breathe. Try again.' : message, 2);
+  }
 }
 
 function completeLevel() {
@@ -562,7 +657,8 @@ function nearestPlatformAhead() {
 function aiNeedsToJump() {
   const playerRight = player.x + player.w;
   const feet = player.y + player.h;
-  const lookAhead = 92 + Math.min(22, Math.abs(player.vx) * 0.08);
+  const lookAhead = 92 + Math.min(22, Math.abs(player.vx) * 0.08)
+    + Math.min(80, aiRetriesThisLevel * 3);
   const closeAhead = (hazard) => hazard.x + hazard.w > playerRight + 2
     && hazard.x < playerRight + lookAhead;
 
@@ -729,11 +825,22 @@ function updateWorld(dt) {
 }
 
 function drawBackground() {
+  const biomeHue = [148, 30, 196, 267, 352][Math.floor((currentLevel - 1) / 20)];
+  const levelHue = biomeHue + ((currentLevel - 1) % 20) * 1.4;
+  const skyTop = `hsl(${levelHue}, 48%, 78%)`;
+  const skyMiddle = `hsl(${levelHue + 16}, 47%, 86%)`;
+  const skyLow = `hsl(${levelHue + 35}, 43%, 76%)`;
+  const skyGround = `hsl(${levelHue + 74}, 30%, 53%)`;
+  const farHill = `hsl(${levelHue + 43}, 25%, 65%)`;
+  const nearHill = `hsl(${levelHue + 58}, 26%, 49%)`;
+  const treeColor = `hsl(${levelHue + 70}, 29%, 40%)`;
+  const meadowTop = `hsl(${levelHue + 83}, 32%, 57%)`;
+  const meadowBottom = `hsl(${levelHue + 75}, 35%, 39%)`;
   const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-  gradient.addColorStop(0, '#8cc9ce');
-  gradient.addColorStop(0.48, '#b1d6c1');
-  gradient.addColorStop(0.76, '#e8d6a0');
-  gradient.addColorStop(1, '#769a69');
+  gradient.addColorStop(0, skyTop);
+  gradient.addColorStop(0.48, skyMiddle);
+  gradient.addColorStop(0.76, skyLow);
+  gradient.addColorStop(1, skyGround);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
@@ -743,7 +850,7 @@ function drawBackground() {
   sunGlow.addColorStop(1, 'rgba(255, 240, 176, 0)');
   ctx.fillStyle = sunGlow;
   ctx.fillRect(sunX - 96, 9, 192, 192);
-  ctx.fillStyle = '#fff1b6';
+  ctx.fillStyle = `hsl(${levelHue + 38}, 91%, 84%)`;
   ctx.beginPath();
   ctx.arc(sunX, 105, 31, 0, Math.PI * 2);
   ctx.fill();
@@ -760,7 +867,7 @@ function drawBackground() {
     ctx.fill();
   }
 
-  ctx.fillStyle = '#92b9a2';
+  ctx.fillStyle = farHill;
   ctx.beginPath();
   ctx.moveTo(0, 303);
   for (let x = 0; x <= WIDTH + 32; x += 32) {
@@ -773,7 +880,7 @@ function drawBackground() {
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = '#668b76';
+  ctx.fillStyle = nearHill;
   ctx.beginPath();
   ctx.moveTo(0, 356);
   for (let x = 0; x <= WIDTH + 38; x += 38) {
@@ -790,7 +897,7 @@ function drawBackground() {
     const x = ((i * 89 - cameraX * 0.3) % (WIDTH + 120) + WIDTH + 120) % (WIDTH + 120) - 35;
     const baseY = 327 + (i * 31) % 92;
     const crown = 22 + (i * 17) % 18;
-    ctx.fillStyle = i % 3 === 0 ? '#557b64' : '#5d8868';
+    ctx.fillStyle = treeColor;
     ctx.fillRect(x - 3, baseY - crown, 6, crown);
     ctx.beginPath();
     ctx.arc(x, baseY - crown - 8, 12, 0, Math.PI * 2);
@@ -804,8 +911,8 @@ function drawBackground() {
   }
 
   const meadow = ctx.createLinearGradient(0, 417, 0, HEIGHT);
-  meadow.addColorStop(0, '#8eae71');
-  meadow.addColorStop(1, '#597e59');
+  meadow.addColorStop(0, meadowTop);
+  meadow.addColorStop(1, meadowBottom);
   ctx.fillStyle = meadow;
   ctx.fillRect(0, 417, WIDTH, HEIGHT - 417);
   ctx.fillStyle = 'rgba(231, 230, 164, 0.3)';
@@ -1228,6 +1335,8 @@ bindTouchControl('jumpButton', 'jump');
 document.querySelector('#restartButton').addEventListener('click', () => startLevel(currentLevel));
 document.querySelector('#pauseButton').addEventListener('click', togglePause);
 document.querySelector('#aiButton').addEventListener('click', toggleAIPilot);
+musicButton.addEventListener('click', toggleLevelMusic);
+rotateButton.addEventListener('click', rotateForPhone);
 screenSizeInput.addEventListener('input', () => setScreenSize(screenSizeInput.value));
 fullscreenButton.addEventListener('click', toggleFullscreen);
 stageFullscreenButton.addEventListener('click', toggleFullscreen);

@@ -236,6 +236,10 @@ h1 span {
   gap: 7px;
 }
 
+.mobile-only-button {
+  display: none !important;
+}
+
 .level-select-link,
 .back-link {
   display: inline-flex;
@@ -988,6 +992,10 @@ canvas {
 }
 
 @media (hover: none) and (pointer: coarse) {
+  .mobile-only-button {
+    display: grid !important;
+  }
+
   .mobile-controls {
     display: flex;
     min-height: 76px;

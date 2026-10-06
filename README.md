@@ -21,7 +21,14 @@ Then visit <http://localhost:8000>.
 - Choose an unlocked level: click **Levels** beside the game controls
 
 AI Pilot uses the Python hazard planner when the backend is running and falls
-back to the browser's built-in hazard-aware pilot otherwise.
+back to the browser's built-in hazard-aware pilot otherwise. The pilot remains
+active after a trap, retries the level automatically, and broadens its hazard
+look-ahead after AI deaths; a trap can still defeat an individual attempt.
+
+Each of the 100 levels has a level-specific variation of its nature palette
+and an original procedural melody. Start the music with the **♫** button;
+browsers require a tap before audio can play. On phones, use the rotate button
+to request landscape orientation (browser and device support may be required).
 
 The game automatically adapts its layout to desktop and mobile screens. On
 phones, large multitouch controls appear below the game; on desktop, use the
