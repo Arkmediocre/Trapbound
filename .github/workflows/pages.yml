@@ -28,7 +28,7 @@ jobs:
       - name: Upload the game site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: index.html
+          path: .
       - name: Publish the site
         id: deployment
         uses: actions/deploy-pages@v4
