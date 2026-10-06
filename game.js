@@ -461,10 +461,10 @@ function startLevel(level) {
   input.jumpQueued = false;
   document.querySelector('#pauseButton').textContent = 'Ⅱ';
   document.querySelector('#pauseButton').setAttribute('aria-label', 'Pause game');
+  statusTimer = 0;
+  stageMessage.classList.add('is-hidden');
   updateProgressUI();
   selectLevelMusic();
-  const chapter = chapters[Math.min(4, Math.floor((currentLevel - 1) / 20))];
-  setStatus(`${chapter.name} — find the exit. Trust nothing.`, 3);
 }
 
 function intersect(a, b) {
@@ -822,8 +822,7 @@ function updateWorld(dt) {
   if (statusTimer > 0) {
     statusTimer -= dt;
     if (statusTimer <= 0 && !won) {
-      statusEl.textContent = 'Find the exit. Trust nothing.';
-      if (currentLevel >= 61) statusEl.textContent = 'Some platforms have commitment issues.';
+      stageMessage.classList.add('is-hidden');
     }
   }
 }
