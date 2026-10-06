@@ -829,11 +829,10 @@ function updateWorld(dt) {
 }
 
 function drawBackground() {
-  const biomeHue = [148, 30, 196, 267, 352][Math.floor((currentLevel - 1) / 20)];
+  const biomeIndex = Math.floor((currentLevel - 1) / 20);
   const levelVariation = (currentLevel - 1) % 20;
-  const levelHue = biomeHue + levelVariation * 5;
-  const floraHue = [126, 93, 157, 121, 109][Math.floor((currentLevel - 1) / 20)]
-    + levelVariation * 0.9;
+  const levelHue = ((currentLevel - 1) * 11) % 360;
+  const floraHue = [126, 93, 157, 121, 109][biomeIndex] + levelVariation * 0.9;
   const skyTop = `hsl(${levelHue}, 48%, 78%)`;
   const skyMiddle = `hsl(${levelHue + 16}, 47%, 86%)`;
   const skyLow = `hsl(${levelHue + 35}, 43%, 76%)`;
