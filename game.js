@@ -64,6 +64,7 @@ let aiRequestGeneration = 0;
 let aiRequestInFlight = false;
 let aiServerAvailable = false;
 let aiServerErrorShown = false;
+let aiServerDisabled = false;
 let audioContext = null;
 let musicTimer = 0;
 let musicEnabled = false;
@@ -274,6 +275,7 @@ function setStatus(message, duration = 2.5) {
 function updateMusicButton() {
   const label = musicEnabled ? 'Stop level music' : 'Start level music';
   musicButton.setAttribute('aria-label', label);
+  musicButton.setAttribute('aria-pressed', String(musicEnabled));
   musicButton.title = label;
   musicButton.classList.toggle('is-active', musicEnabled);
 }
@@ -304,7 +306,8 @@ function selectLevelMusic() {
   if (musicTimer) window.clearTimeout(musicTimer);
   if (!musicEnabled) return;
   const random = randomForLevel(currentLevel + 137);
-  musicNotes = Array.from({ length: 8 }, () => Math.floor(random() * 8));
+  musicNotes = Array.from({ length: 8 }, (_, index) =>
+    (Math.floor(random() * 8) + index * (currentLevel % 8)) % 8);
   musicStep = 0;
   scheduleLevelMusic();
 }
@@ -754,6 +757,7 @@ function requestPythonAIDecision() {
       if (generation !== aiRequestGeneration) return;
       aiServerAvailable = false;
       aiServerJump = false;
+      aiServerDisabled = true;
       if (!aiServerErrorShown) {
         console.info('Python AI server unavailable; using the built-in pilot.', error);
         aiServerErrorShown = true;
@@ -770,7 +774,7 @@ function updateAIPilot(dt) {
   input.left = false;
   input.right = true;
   aiRequestCountdown -= dt;
-  if (aiRequestCountdown <= 0) {
+  if (aiRequestCountdown <= 0 && !aiServerDisabled) {
     aiRequestCountdown = 0.18;
     requestPythonAIDecision();
   }
@@ -826,16 +830,19 @@ function updateWorld(dt) {
 
 function drawBackground() {
   const biomeHue = [148, 30, 196, 267, 352][Math.floor((currentLevel - 1) / 20)];
-  const levelHue = biomeHue + ((currentLevel - 1) % 20) * 1.4;
+  const levelVariation = (currentLevel - 1) % 20;
+  const levelHue = biomeHue + levelVariation * 5;
+  const floraHue = [126, 93, 157, 121, 109][Math.floor((currentLevel - 1) / 20)]
+    + levelVariation * 0.9;
   const skyTop = `hsl(${levelHue}, 48%, 78%)`;
   const skyMiddle = `hsl(${levelHue + 16}, 47%, 86%)`;
   const skyLow = `hsl(${levelHue + 35}, 43%, 76%)`;
   const skyGround = `hsl(${levelHue + 74}, 30%, 53%)`;
-  const farHill = `hsl(${levelHue + 43}, 25%, 65%)`;
-  const nearHill = `hsl(${levelHue + 58}, 26%, 49%)`;
-  const treeColor = `hsl(${levelHue + 70}, 29%, 40%)`;
-  const meadowTop = `hsl(${levelHue + 83}, 32%, 57%)`;
-  const meadowBottom = `hsl(${levelHue + 75}, 35%, 39%)`;
+  const farHill = `hsl(${floraHue + 23}, 25%, 65%)`;
+  const nearHill = `hsl(${floraHue + 38}, 26%, 49%)`;
+  const treeColor = `hsl(${floraHue + 50}, 29%, 40%)`;
+  const meadowTop = `hsl(${floraHue + 15}, 32%, 57%)`;
+  const meadowBottom = `hsl(${floraHue + 34}, 35%, 39%)`;
   const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
   gradient.addColorStop(0, skyTop);
   gradient.addColorStop(0.48, skyMiddle);
